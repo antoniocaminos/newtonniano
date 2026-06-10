@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Laboratorio de Óptica: Experimento Crucial de Newton</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Experimento Crucial de Newton: Refracción Monocromática Dinámica</h1>
+        <button id="btn-reset" class="btn-primary">🔄 Resetear Lab</button>
+    </header>
+
+    <div class="info-box">
+        <strong>Guía Pedagógica:</strong> Desplazá verticalmente el Prisma 2. Vas a notar que solo el color del espectro que impacte en su cara es el que se desvía de forma aislada, demostrando la pureza espectral.
+    </div>
+
+    <main id="app-container">
+        <canvas id="optics-canvas"></canvas>
+
+        <div id="control-panel">
+            <div class="control-group border-prism1">
+                <h3>Prisma 1 (Generador del Espectro)</h3>
+                <div class="row">
+                    <label for="p1-y">Posición Y:</label>
+                    <input type="range" id="p1-y" min="-100" max="100" step="1" value="0">
+                </div>
+                <div class="row">
+                    <label for="p1-rot">Giro (°):</label>
+                    <input type="range" id="p1-rot" min="-25" max="25" step="1" value="0">
+                </div>
+            </div>
+
+            <div class="control-group border-prism2">
+                <h3>Prisma 2 (Aislador/Refractor)</h3>
+                <div class="row">
+                    <label for="p2-y">Posición Y:</label>
+                    <input type="range" id="p2-y" min="-180" max="180" step="1" value="50">
+                </div>
+                <div class="row">
+                    <label for="p2-rot">Giro (°):</label>
+                    <input type="range" id="p2-rot" min="-35" max="35" step="1" value="0">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
