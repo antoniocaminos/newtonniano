@@ -16,7 +16,7 @@ resizeCanvas();
 
 const state = {
     p1: { yOffset: 0, rotation: 0 },
-    p2: { yOffset: 0, rotation: 0 } // Cambiado por defecto a 0 para alineación perfecta
+    p2: { yOffset: 0, rotation: 0 } // Ajustado a 0 por defecto para que inicie alineado
 };
 
 const spectrum = [
@@ -29,6 +29,7 @@ const spectrum = [
     { name: 'Violeta',  color: 'rgba(150, 0, 230, 0.85)',  offsetFactor: 3.7 }
 ];
 
+// Corregida la colisión para el Prisma 2 invertido
 function isInsidePrism2(px, py, cx, cy, side, rotationDeg) {
     const rad = (-rotationDeg * Math.PI) / 180;
     const dx = px - cx;
@@ -43,11 +44,12 @@ function isInsidePrism2(px, py, cx, cy, side, rotationDeg) {
     if (ry < topY || ry > bottomY) return false;
 
     const fraction = (ry - topY) / h;
-    const maxWidthAtY = side * fraction; // Corregido para prisma invertido
+    const maxWidthAtY = side * fraction; // Cambiado para mapear bien la base invertida
 
     return Math.abs(rx) <= maxWidthAtY / 2;
 }
 
+// Corregido el dibujo del primer prisma que se rompía en la versión anterior
 function drawPrismShape(centerX, centerY, side, invert = false, rotationDeg = 0) {
     ctx.save();
     ctx.translate(centerX, centerY);
@@ -63,8 +65,8 @@ function drawPrismShape(centerX, centerY, side, invert = false, rotationDeg = 0)
     } else {
         ctx.moveTo(0, h / 2);
         ctx.lineTo(side / 2, -h / 2);
+        ctx.lineTo(-side / 2, -h / 2); // Línea recuperada para cerrar bien el triángulo invertido
     }
-    ctx.lineTo(-side / 2, -h / 2);
     ctx.closePath();
 
     const grad = ctx.createLinearGradient(-side/2, -h/2, side/2, h/2);
@@ -89,12 +91,12 @@ function render() {
 
     const prismSide = Math.min(canvas.width * 0.14, 160);
     const p1CenterX = midX - prismSide * 1.3;
-    const p2CenterX = midX + prismSide * 0.9; // Separación levemente optimizada
+    const p2CenterX = midX + prismSide * 0.8; 
 
     const p1Y = midY + state.p1.yOffset;
     const p2Y = midY + state.p2.yOffset;
 
-    // 1. Haz de luz blanca original
+    // Haz de luz blanca entrante
     const startX = 0;
     const startY = midY - 20; 
     const p1HitX = p1CenterX - prismSide / 4;
@@ -112,16 +114,16 @@ function render() {
 
     const p1ExitX = p1CenterX + prismSide * 0.3;
 
-    // Variables para calcular el punto de reunión de la luz blanca
     let allRaysHitPrism2 = true;
+    
+    // Punto exacto en la cara de salida del Prisma 2 donde se van a recombinar los rayos
     const p2ExitX = p2CenterX + prismSide * 0.15;
-    // El punto de convergencia dinámica basado en la rotación del Prisma 2
     const p2RecombinationY = p2Y - 5 + (state.p2.rotation * 0.5); 
 
     spectrum.forEach((ray) => {
         const p1InternalExitY = p1Y + 5 + (ray.offsetFactor * 2) + (state.p1.rotation * 0.4);
 
-        // Dibujar espectro interno Prisma 1
+        // Espectro interno P1
         ctx.strokeStyle = ray.color;
         ctx.lineWidth = 3.5;
         ctx.beginPath();
@@ -129,7 +131,7 @@ function render() {
         ctx.lineTo(p1ExitX, p1InternalExitY);
         ctx.stroke();
 
-        // Trayecto entre Prisma 1 y Prisma 2
+        // Espectro viajando entre prismas
         const stepX = p2CenterX - prismSide * 0.4;
         const dynamicSlope = 0.12 + (ray.offsetFactor * 0.035) + (state.p1.rotation * 0.02);
         const p2ArrivalY = p1InternalExitY + (stepX - p1ExitX) * dynamicSlope;
@@ -141,19 +143,18 @@ function render() {
         }
 
         if (hitsPrism2) {
-            // Rayo de color va desde la salida del P1 hasta la cara del P2
             ctx.beginPath();
             ctx.moveTo(p1ExitX, p1InternalExitY);
             ctx.lineTo(stepX, p2ArrivalY);
             ctx.stroke();
 
-            // DENTRO DEL PRISMA 2: Los rayos convergen hacia el punto de recombinación
+            // DENTRO DEL PRISMA 2: Obligamos a los rayos a converger al punto común
             ctx.beginPath();
             ctx.moveTo(stepX, p2ArrivalY);
             ctx.lineTo(p2ExitX, p2RecombinationY);
             ctx.stroke();
         } else {
-            // Si no toca el prisma 2, el color sigue de largo de forma infinita
+            // Si el rayo no entra al Prisma 2, se dispersa libremente por la pantalla
             const endX = canvas.width;
             const cleanPassY = p1InternalExitY + (endX - p1ExitX) * dynamicSlope;
 
@@ -164,11 +165,9 @@ function render() {
         }
     });
 
-    // 2. Haz de luz blanca recombinada saliendo del Prisma 2
-    // Solo se genera si todos los colores lograron ingresar y recombinarse correctamente
+    // RECOMBINACIÓN: Si todo el espectro impacta el Prisma 2, vuelve a salir luz blanca pura
     if (allRaysHitPrism2) {
         const endX = canvas.width;
-        // El ángulo de salida se equilibra de forma horizontal gracias a la inversión del prisma
         const finalSlope = 0.0 + (state.p1.rotation * 0.02) - (state.p2.rotation * 0.03);
         const p2FinalY = p2RecombinationY + (endX - p2ExitX) * finalSlope;
 
@@ -183,7 +182,6 @@ function render() {
         ctx.shadowBlur = 0;
     }
 
-    // Dibujar las geometrías de los prismas por encima de la luz
     drawPrismShape(p1CenterX, p1Y, prismSide, false, state.p1.rotation);
     drawPrismShape(p2CenterX, p2Y, prismSide, true, state.p2.rotation);
 
@@ -198,7 +196,7 @@ p2RotInput.addEventListener('input', (e) => state.p2.rotation = parseFloat(e.tar
 btnReset.addEventListener('click', () => {
     state.p1.yOffset = 0;
     state.p1.rotation = 0;
-    state.p2.yOffset = 0; // Cambiado a 0 para que por defecto empiece alineado y recombinando
+    state.p2.yOffset = 0;
     state.p2.rotation = 0;
 
     p1YInput.value = 0;
@@ -207,7 +205,7 @@ btnReset.addEventListener('click', () => {
     p2RotInput.value = 0;
 });
 
-// Inicialización corregida para que empiece alineado
+// Iniciamos alineados correctamente
 state.p2.yOffset = 0;
 p2YInput.value = 0;
 
